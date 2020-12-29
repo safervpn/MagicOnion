@@ -10,7 +10,11 @@ namespace MagicOnion.Server
             where TServiceBase : ServiceBase<TServiceInterface>
             where TServiceInterface : IServiceMarker
         {
-            var instance = ActivatorUtilities.CreateInstance<TServiceBase>(context.ServiceProvider);
+            var instance = context.ServiceProvider.GetService<TServiceBase>();
+
+                if (instance == null)
+                    instance = ActivatorUtilities.CreateInstance<TServiceBase>(context.ServiceProvider);
+
             instance.Context = context;
             return instance;
         }

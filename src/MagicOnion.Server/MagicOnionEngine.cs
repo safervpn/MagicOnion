@@ -146,48 +146,53 @@ namespace MagicOnion.Server
                         throw new NotImplementedException($"Type '{classType.FullName}' has no implementation of interface '{inheritInterface.FullName}'.");
                     }
 
-                    var interfaceMap = classType.GetInterfaceMap(inheritInterface);
+                    var interfacesToMap = GetInterfacesRecursive(inheritInterface);
 
-                    for (int i = 0; i < interfaceMap.TargetMethods.Length; ++i)
+                    foreach (var interf in interfacesToMap)
                     {
-                        var methodInfo = interfaceMap.TargetMethods[i];
-                        var methodName = interfaceMap.InterfaceMethods[i].Name;
+                        var interfaceMap = classType.GetInterfaceMap(interf);
 
-                        if (methodInfo.IsSpecialName && (methodInfo.Name.StartsWith("set_") || methodInfo.Name.StartsWith("get_"))) continue;
-                        if (methodInfo.GetCustomAttribute<IgnoreAttribute>(false) != null) continue; // ignore
-
-                        // ignore default methods
-                        if (methodName == "Equals"
-                                || methodName == "GetHashCode"
-                                || methodName == "GetType"
-                                || methodName == "ToString"
-                                || methodName == "WithOptions"
-                                || methodName == "WithHeaders"
-                                || methodName == "WithDeadline"
-                                || methodName == "WithCancellationToken"
-                                || methodName == "WithHost"
-                                )
+                        for (int i = 0; i < interfaceMap.TargetMethods.Length; ++i)
                         {
-                            continue;
-                        }
+                            var methodInfo = interfaceMap.TargetMethods[i];
+                            var methodName = interfaceMap.InterfaceMethods[i].Name;
 
-                        // register for StreamingHub
-                        if (isStreamingHub && methodName != "Connect")
-                        {
-                            var streamingHandler = new StreamingHubHandler(classType, methodInfo, new StreamingHubHandlerOptions(options), serviceProvider);
-                            if (!tempStreamingHubHandlers!.Add(streamingHandler))
+                            if (methodInfo.IsSpecialName && (methodInfo.Name.StartsWith("set_") || methodInfo.Name.StartsWith("get_"))) continue;
+                            if (methodInfo.GetCustomAttribute<IgnoreAttribute>(false) != null) continue; // ignore
+
+                            // ignore default methods
+                            if (methodName == "Equals"
+                                    || methodName == "GetHashCode"
+                                    || methodName == "GetType"
+                                    || methodName == "ToString"
+                                    || methodName == "WithOptions"
+                                    || methodName == "WithHeaders"
+                                    || methodName == "WithDeadline"
+                                    || methodName == "WithCancellationToken"
+                                    || methodName == "WithHost"
+                                    )
                             {
-                                throw new InvalidOperationException($"Method does not allow overload, {className}.{methodName}");
+                                continue;
                             }
-                            continue;
-                        }
-                        else
-                        {
-                            // create handler
-                            var handler = new MethodHandler(classType, methodInfo, methodName, new MethodHandlerOptions(options), serviceProvider);
-                            if (!handlers.Add(handler))
+
+                            // register for StreamingHub
+                            if (isStreamingHub && methodName != "Connect")
                             {
-                                throw new InvalidOperationException($"Method does not allow overload, {className}.{methodName}");
+                                var streamingHandler = new StreamingHubHandler(classType, methodInfo, new StreamingHubHandlerOptions(options), serviceProvider, interf);
+                                if (!tempStreamingHubHandlers!.Add(streamingHandler))
+                                {
+                                    throw new InvalidOperationException($"Method does not allow overload, {className}.{methodName}");
+                                }
+                                continue;
+                            }
+                            else
+                            {
+                                // create handler
+                                var handler = new MethodHandler(classType, methodInfo, methodName, new MethodHandlerOptions(options), serviceProvider);
+                                if (!handlers.Add(handler))
+                                {
+                                    throw new InvalidOperationException($"Method does not allow overload, {className}.{methodName}");
+                                }
                             }
                         }
                     }
@@ -227,6 +232,22 @@ namespace MagicOnion.Server
             logger.EndBuildServiceDefinition(sw.Elapsed.TotalMilliseconds);
 
             return result;
+        }
+
+        private static IEnumerable<Type> GetInterfacesRecursive(Type t, HashSet<Type> interfaces = null)
+        {
+            if (interfaces == null) interfaces = new HashSet<Type>();
+
+            if (t.IsInterface) interfaces.Add(t); // yield return t;
+            foreach (var i in t.GetInterfaces().Where(i => i.Assembly != typeof(IService<>).Assembly))
+            {
+                foreach (var iChild in GetInterfacesRecursive(i, interfaces))
+                {
+                    interfaces.Add(iChild);
+                }
+            }
+
+            return interfaces;
         }
     }
 }

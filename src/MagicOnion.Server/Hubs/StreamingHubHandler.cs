@@ -42,10 +42,10 @@ namespace MagicOnion.Server.Hubs
             return mapping.InterfaceMethods[methodIndex];
         }
 
-        public StreamingHubHandler(Type classType, MethodInfo methodInfo, StreamingHubHandlerOptions handlerOptions, IServiceProvider serviceProvider)
+        public StreamingHubHandler(Type classType, MethodInfo methodInfo, StreamingHubHandlerOptions handlerOptions, IServiceProvider serviceProvider, Type methodInterface = null)
         {
             var hubInterface = classType.GetInterfaces().First(x => x.GetTypeInfo().IsGenericType && x.GetGenericTypeDefinition() == typeof(IStreamingHub<,>)).GetGenericArguments()[0];
-            var interfaceMethod = GetInterfaceMethod(classType, hubInterface, methodInfo.Name);
+            var interfaceMethod = GetInterfaceMethod(classType, methodInterface ?? hubInterface, methodInfo.Name);
 
             this.serviceProvider = serviceProvider;
 
