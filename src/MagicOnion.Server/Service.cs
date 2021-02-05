@@ -9,7 +9,27 @@ namespace MagicOnion.Server
     public abstract class ServiceBase<TServiceInterface> : IService<TServiceInterface>
         where TServiceInterface : IServiceMarker
     {
-        public ServiceContext Context { get; set; }
+        private readonly object contextLock = new object();
+
+        private ServiceContext ctx;
+
+        public ServiceContext Context
+        {
+            get {
+                lock (contextLock)
+                {
+                    return ctx;
+                }
+            }
+
+            set
+            {
+                lock (contextLock)
+                {
+                    ctx = value;
+                }
+            }
+        }
 
         public ServiceBase()
         {
