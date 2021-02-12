@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFrameworks>netcoreapp3.1;net5.0</TargetFrameworks>
@@ -11,6 +11,7 @@
     <!-- NuGet -->
     <PackageId>MagicOnion.Server</PackageId>
     <Description>MagicOnion server built on top of ASP.NET Core. $(MagicOnionPackageDescription)</Description>
+    <Version Condition="'$(VersionPrefix)' != ''">$(VersionPrefix).1</Version>
   </PropertyGroup>
 
   <ItemGroup>
